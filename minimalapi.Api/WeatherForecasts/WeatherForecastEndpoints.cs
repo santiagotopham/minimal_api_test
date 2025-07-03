@@ -14,6 +14,13 @@ namespace minimalapi.Api.WeatherForecasts
                 {
                     Summary = "Fetch the weather forecast for a given location"
                 });
+
+            app.MapGet("/forecast/timezone", GetForecastByTimezone)
+                .WithName("GetWeatherForecastByTimezone")
+                .WithOpenApi(x => new OpenApiOperation(x)
+                {
+                    Summary = "Fetch the weather forecast for a given timezone"
+                });
         }
 
         public static async Task<Results<Ok<WeatherForecastResult>, ProblemHttpResult>> GetForecast(
@@ -35,6 +42,43 @@ namespace minimalapi.Api.WeatherForecasts
             {
                 TemperatureC = forecast.Current.Temperature
             });
+        }
+
+        public static async Task<Results<Ok<WeatherForecastResult>, ProblemHttpResult>> GetForecastByTimezone(
+        string timezone,
+        WeatherForecastService weatherForecastService)
+        {
+            if (string.IsNullOrWhiteSpace(timezone))
+            {
+                return TypedResults.Problem(
+                    "Timezone parameter is required",
+                    statusCode: StatusCodes.Status400BadRequest
+                );
+            }
+
+            try
+            {
+                var forecast = await weatherForecastService.GetForecastByTimezone(timezone);
+
+                return TypedResults.Ok(new WeatherForecastResult
+                {
+                    TemperatureC = forecast.Current.Temperature
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return TypedResults.Problem(
+                    ex.Message,
+                    statusCode: StatusCodes.Status400BadRequest
+                );
+            }
+            catch (Exception)
+            {
+                return TypedResults.Problem(
+                    "Failed to get weather forecast for the specified timezone",
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
+            }
         }
     }
 }
